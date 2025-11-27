@@ -32,7 +32,6 @@ public class SecurityConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
                         .allowedOrigins("https://5b84c315b2104403a4b6583d3336034c-1574df9c7b3e434baed0e0aa8.fly.dev")
-                        .allowedOrigins("http://localhost:5174")
                         .allowedOrigins("http://localhost:5173")
                         .allowedOrigins("https://qckwallet.netlify.app")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
