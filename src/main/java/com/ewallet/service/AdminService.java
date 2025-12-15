@@ -23,9 +23,9 @@ public class AdminService {
     @Autowired
     private FraudAlertRepository fraudAlertRepository;
 
-    // public List<User> getAllUsers() {
-    //     return userRepository.findAll();
-    // }
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
 
     public List<Transaction> getAllTransactions() {
         return transactionRepository.findAll();
