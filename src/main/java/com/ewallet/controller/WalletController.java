@@ -39,24 +39,47 @@ public class WalletController {
         return ResponseEntity.badRequest().body("User not found");
     }
 
-    // Transfer money
-    @PostMapping("/transfer")
-    public ResponseEntity<?> transfer(
-            @RequestHeader("Authorization") String authHeader,
-            @RequestBody Map<String, Object> payload) {
+@PostMapping("/transfer")
+public ResponseEntity<?> transfer(
+        @RequestHeader("Authorization") String authHeader,
+        @RequestBody Map<String, Object> payload) {
 
-        String token = authHeader.substring(7);
-        String senderId = jwtUtil.getUserIdFromToken(token);
-
-        String receiverId = payload.get("receiverId").toString();
-        BigDecimal amount = new BigDecimal(payload.get("amount").toString());
-
-        boolean success = walletService.transfer(senderId, receiverId, amount);
-        if (success)
-            return ResponseEntity.ok("Transfer successful");
-
-        return ResponseEntity.badRequest().body("Insufficient balance or invalid user");
+    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        return ResponseEntity.status(401).body("Invalid token");
     }
+
+    Object receiverObj = payload.get("receiverId");
+    Object amountObj = payload.get("amount");
+    Object passwordObj = payload.get("password");
+
+    if (receiverObj == null || amountObj == null || passwordObj == null) {
+        return ResponseEntity.badRequest()
+                .body("receiverId, amount, and password are required");
+    }
+
+    String token = authHeader.substring(7);
+    String senderId = jwtUtil.getUserIdFromToken(token);
+
+    String receiverId = receiverObj.toString();
+    BigDecimal amount = new BigDecimal(amountObj.toString());
+    String password = passwordObj.toString();
+
+    boolean passwordValid =
+            walletService.verifyUserPassword(senderId, password);
+
+    if (!passwordValid) {
+        return ResponseEntity.status(401).body("Invalid password");
+    }
+
+    boolean success = walletService.transfer(senderId, receiverId, amount);
+
+    return success
+            ? ResponseEntity.ok("Transfer successful")
+            : ResponseEntity.badRequest()
+                .body("Insufficient balance or invalid user");
+}
+
+
 
     // Get wallet balance
     @GetMapping("/balance")

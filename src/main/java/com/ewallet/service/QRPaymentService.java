@@ -32,10 +32,15 @@ public class QRPaymentService {
         return qrPaymentRepository.save(qr);
     }
 
-    public boolean payUsingQR(String qrId, String payerId) {
-        QRPayment qrOpt = qrPaymentRepository.findById(qrId).orElse(null);
-        User payer = userRepository.findById(payerId).orElse(null);
+    public boolean payUsingQR(String qrCodeData, String userId) {
+        QRPayment qrOpt = qrPaymentRepository.findById(qrCodeData).orElse(null);
+        System.err.println(qrOpt);
+        System.out.println(userId);
+        User payer = userRepository.findById(userId).orElse(null);
+        System.err.println(payer);
+        
         User payee = userRepository.findById(qrOpt.getUserId()).orElse(null);
+        System.err.println(payee);
 
         if (qrOpt != null && !qrOpt.isUsed() && payer != null && payee != null) {
             if (payer.getWalletBalance().compareTo(qrOpt.getAmount()) >= 0) {

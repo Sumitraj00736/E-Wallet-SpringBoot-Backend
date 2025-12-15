@@ -18,10 +18,10 @@ public class AdminController {
     private AdminService adminService;
 
     // Get all users
-    @GetMapping("/users")
-    public ResponseEntity<List<User>> getAllUsers() {
-        return ResponseEntity.ok(adminService.getAllUsers());
-    }
+    // @GetMapping("/users")
+    // public ResponseEntity<List<User>> getAllUsers() {
+    //     return ResponseEntity.ok(adminService.getAllUsers());
+    // }
 
     // Get all transactions
     @GetMapping("/transactions")

@@ -26,6 +26,10 @@ public class UserController {
         User savedUser = userService.registerUser(user);
         return ResponseEntity.ok(savedUser);
     }
+@GetMapping("/users")
+public ResponseEntity<?> getAllUsers() {
+    return ResponseEntity.ok(userService.getAllUsers());
+}
 
     // Login
     @PostMapping("/login")

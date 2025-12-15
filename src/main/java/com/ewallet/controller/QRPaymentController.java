@@ -20,14 +20,15 @@ public class QRPaymentController {
     private QRPaymentService qrPaymentService;
 
     @Autowired
-    private JwtUtil jwtUtil; 
+    private JwtUtil jwtUtil;
 
     // Request body class for QR generation (optional)
     public static class QRRequest {
         private BigDecimal amount;
         private String purpose;
 
-        public QRRequest() { }
+        public QRRequest() {
+        }
 
         public BigDecimal getAmount() {
             return amount;
@@ -69,8 +70,11 @@ public class QRPaymentController {
 
     // Pay using QR code
     @PostMapping("/pay")
-    public ResponseEntity<?> payUsingQR(@RequestParam String qrId, @RequestParam String payerId) {
+    public ResponseEntity<?> payUsingQR(@RequestBody Map<String, String> payload) {
+        String qrId = payload.get("qrId");
+        String payerId = payload.get("payerId");
         boolean success = qrPaymentService.payUsingQR(qrId, payerId);
+
         if (success)
             return ResponseEntity.ok("Payment successful");
         return ResponseEntity.badRequest().body("Payment failed");

@@ -5,6 +5,7 @@ import com.ewallet.model.User;
 import com.ewallet.repository.TransactionRepository;
 import com.ewallet.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -20,6 +21,9 @@ public class WalletService {
 
     @Autowired
     private TransactionRepository transactionRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;  
 
     public User topUp(String userId, BigDecimal amount) {
         Optional<User> userOpt = userRepository.findById(userId);
@@ -86,4 +90,10 @@ public class WalletService {
     public List<Transaction> getTransactions(String userId) {
         return transactionRepository.findBySenderIdOrReceiverId(userId, userId);
     }
+    public boolean verifyUserPassword(String userId, String rawPassword) {
+    return userRepository.findById(userId)
+            .map(user -> passwordEncoder.matches(rawPassword, user.getPassword()))
+            .orElse(false);
+}
+
 }
