@@ -5,11 +5,14 @@ import com.ewallet.model.User;
 import com.ewallet.repository.QRPaymentRepository;
 import com.ewallet.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -21,42 +24,53 @@ public class QRPaymentService {
     @Autowired
     private UserRepository userRepository;
 
-    public QRPayment generateQR( String userId,BigDecimal amount) {
+    @Autowired
+    private NotificationService notificationService;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    public QRPayment generateQR(String userId, BigDecimal amount) {
         QRPayment qr = new QRPayment();
         qr.setUserId(userId);
         qr.setAmount(amount);
         qr.setQrCodeData(UUID.randomUUID().toString());
         qr.setUsed(false);
         qr.setCreatedAt(LocalDateTime.now());
-
         return qrPaymentRepository.save(qr);
     }
 
-    public boolean payUsingQR(String qrCodeData, String userId) {
-        QRPayment qrOpt = qrPaymentRepository.findById(qrCodeData).orElse(null);
-        System.err.println(qrOpt);
-        System.out.println(userId);
-        User payer = userRepository.findById(userId).orElse(null);
-        System.err.println(payer);
-        
-        User payee = userRepository.findById(qrOpt.getUserId()).orElse(null);
-        System.err.println(payee);
+@Transactional
+public boolean payUsingQR(String qrCodeData, String payerId) {
+    QRPayment qr = qrPaymentRepository.findByQrCodeData(qrCodeData).orElse(null);
+    if (qr == null || qr.isUsed()) return false;
 
-        if (qrOpt != null && !qrOpt.isUsed() && payer != null && payee != null) {
-            if (payer.getWalletBalance().compareTo(qrOpt.getAmount()) >= 0) {
-                payer.setWalletBalance(payer.getWalletBalance().subtract(qrOpt.getAmount()));
-                payee.setWalletBalance(payee.getWalletBalance().add(qrOpt.getAmount()));
-                qrOpt.setUsed(true);
+    User payer = userRepository.findById(payerId).orElse(null);
+    User payee = userRepository.findById(qr.getUserId()).orElse(null);
+    if (payer == null || payee == null || payer.getId().equals(payee.getId())) return false;
+    if (payer.getWalletBalance().compareTo(qr.getAmount()) < 0) return false;
 
-                userRepository.save(payer);
-                userRepository.save(payee);
-                qrPaymentRepository.save(qrOpt);
+    // Perform transaction
+    payer.setWalletBalance(payer.getWalletBalance().subtract(qr.getAmount()));
+    payee.setWalletBalance(payee.getWalletBalance().add(qr.getAmount()));
+    qr.setUsed(true);
 
-                return true;
-            }
-        }
-        return false;
-    }
+    userRepository.save(payer);
+    userRepository.save(payee);
+    qrPaymentRepository.save(qr);
+
+    messagingTemplate.convertAndSend(
+        "/topic/qr/" + qr.getQrCodeData(),
+        Map.of(
+            "status", "PAID",
+            "amount", qr.getAmount(),
+            "payer", payer.getName()
+        )
+    );
+
+    return true;
+}
+
 
     public List<QRPayment> getUserQRs(String userId) {
         return qrPaymentRepository.findByUserId(userId);

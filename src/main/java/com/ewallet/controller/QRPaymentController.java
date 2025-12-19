@@ -5,6 +5,7 @@ import com.ewallet.security.JwtUtil;
 import com.ewallet.service.QRPaymentService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -71,13 +72,48 @@ public class QRPaymentController {
     // Pay using QR code
     @PostMapping("/pay")
     public ResponseEntity<?> payUsingQR(@RequestBody Map<String, String> payload) {
-        String qrId = payload.get("qrId");
-        String payerId = payload.get("payerId");
-        boolean success = qrPaymentService.payUsingQR(qrId, payerId);
+        try {
+            // 1️⃣ Validate request payload
+            if (payload == null || !payload.containsKey("qrCodeData") || !payload.containsKey("payerId")) {
+                return ResponseEntity
+                        .badRequest()
+                        .body(Map.of("error", "Missing qrCodeData or payerId in request"));
+            }
 
-        if (success)
-            return ResponseEntity.ok("Payment successful");
-        return ResponseEntity.badRequest().body("Payment failed");
+            String qrCodeData = payload.get("qrCodeData");
+            String payerId = payload.get("payerId");
+
+            if (qrCodeData.isBlank() || payerId.isBlank()) {
+                return ResponseEntity
+                        .badRequest()
+                        .body(Map.of("error", "qrCodeData or payerId cannot be empty"));
+            }
+
+            // 2️⃣ Attempt payment
+            boolean success = qrPaymentService.payUsingQR(qrCodeData, payerId);
+
+            if (success) {
+                return ResponseEntity.ok(Map.of(
+                        "message", "Payment successful",
+                        "qrCodeData", qrCodeData,
+                        "payerId", payerId));
+            } else {
+                System.err.println("Payment failed for QR code: " + qrCodeData + " by payer: " + payerId);
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error",
+                                "Payment failed. Possible reasons: insufficient balance, QR already used, invalid QR or payer."));
+            }
+
+        } catch (Exception e) {
+            // 3️⃣ Catch unexpected errors
+            System.err.println("Error processing payUsingQR: " + e.getMessage());
+            e.printStackTrace();
+
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Internal server error: " + e.getMessage()));
+        }
     }
 
     // Get all QR codes for a user
